@@ -1,41 +1,97 @@
 package com.myshop.util;
 
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import org.springframework.stereotype.Component;
-
-import com.myshop.model.User;
-
+import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
-@Component // 把它也声明为一个 Bean，方便注入
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Component;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
+
+@Component
 public class JwtUtil {
 
-    // 秘钥，这是签名的关键。在真实项目中，应该更复杂，并从配置文件中读取
-    private final String SECRET_KEY = "mySecretKeyForMyShopProjectThisShouldBeVeryLongAndSecure";
+    // 从 application.properties 中注入密钥
+    @Value("${application.jwt.secret-key}")
+    private String secretKey;
 
-    // Token 过期时间，这里设置为 10 小时
-    private final long EXPIRATION_TIME = 1000 * 60 * 60 * 10;
+    // 从 application.properties 中注入过期时间
+    @Value("${application.jwt.expiration}")
+    private long jwtExpiration;
 
     /**
-     * 根据用户信息生成 Token
+     * 从JWT中提取用户名
+     * @param token JWT字符串
+     * @return 用户名
      */
-    public String generateToken(User user) {
-        Map<String, Object> claims = new HashMap<>();
-        // 你可以在 claims 中放入任何想包含在 Token 里的信息
-        claims.put("userId", user.getId());
-        claims.put("email", user.getEmail());
+    public String extractUsername(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
 
+    /**
+     * 为指定用户生成JWT
+     * @param userDetails 用户信息
+     * @return JWT字符串
+     */
+    public String generateToken(UserDetails userDetails) {
+        return generateToken(new HashMap<>(), userDetails);
+    }
+
+    /**
+     * 验证JWT是否对特定用户有效
+     * @param token JWT字符串
+     * @param userDetails 用户信息
+     * @return 如果有效则返回true
+     */
+    public boolean isTokenValid(String token, UserDetails userDetails) {
+        final String username = extractUsername(token);
+        // 检查JWT中的用户名是否与UserDetails中的用户名匹配，并且JWT没有过期
+        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+    }
+
+    // --- 私有辅助方法 ---
+
+    private boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
+    }
+
+    private Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = extractAllClaims(token);
+        return claimsResolver.apply(claims);
+    }
+
+    private String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
         return Jwts.builder()
-                .setClaims(claims) // 设置自定义声明
-                .setSubject(user.getUsername()) // 设置主题，通常是用户名
+                .setClaims(extraClaims)
+                .setSubject(userDetails.getUsername()) // 将用户名作为 subject
                 .setIssuedAt(new Date(System.currentTimeMillis())) // 设置签发时间
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME)) // 设置过期时间
-                .signWith(SignatureAlgorithm.HS256, SECRET_KEY) // 设置签名算法和秘钥
+                .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration)) // 设置过期时间
+                .signWith(getSignInKey(), SignatureAlgorithm.HS256) // 使用HS256算法和密钥进行签名
                 .compact();
     }
 
-    // ... 未来可以在这里添加验证 Token 的方法 ...
+    private Claims extractAllClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSignInKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+    private Key getSignInKey() {
+        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
 }

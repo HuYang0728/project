@@ -11,14 +11,14 @@
             created_at,
             updated_at
         FROM
-            t_user
+            users
         WHERE
             username = #{username}
     </select>
     
-    <insert id="insertUser" parameterType="User" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO t_user (username, password_hash, email)
-        VALUES (#{username}, #{passwordHash}, #{email})
-    </insert>
+<insert id="insertUser" parameterType="User" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO users (username, password_hash, email)
+    VALUES (#{username}, #{passwordHash}, #{email})
+</insert>
 
 </mapper>

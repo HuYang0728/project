@@ -1,68 +1,87 @@
 //主厨
-package com.myshop.service; // <-- 已修改
+package com.myshop.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.myshop.dto.RegistrationRequest; // 导入 DTO
+import com.myshop.dto.UserDto; // 导入 DTO
+import com.myshop.exception.UsernameAlreadyExistsException;
 import com.myshop.mapper.UserMapper;
 import com.myshop.model.User;
 import com.myshop.util.JwtUtil;
 
 @Service
-public class UserService {
+public class UserService implements UserDetailsService {
 
     private final UserMapper userMapper;
-    private final PasswordEncoder passwordEncoder; // 声明加密器
+    private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
-    // 使用构造函数注入，这是 Spring 推荐的最佳实践
     @Autowired
     public UserService(UserMapper userMapper, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
-        this.jwtUtil = jwtUtil; // 注入 JwtUtil
+        this.jwtUtil = jwtUtil;
     }
 
-    public User getUserByUsername(String username) {
-        return userMapper.findByUsername(username);
-    }
-    
-    // 新增：用户注册的核心方法
-    public User registerUser(User user) {
-        // 1. 检查用户名是否已存在
-        if (userMapper.findByUsername(user.getUsername()) != null) {
-            // 在真实项目中，这里应该抛出一个自定义的异常，比如 UsernameAlreadyExistsException
-            throw new RuntimeException("用户名已存在!");
-        }
-
-         // 2. --- 核心修改在这里 ---
-        // 从新增的、专门接收明文的 password 字段获取密码
-        String hashedPassword = passwordEncoder.encode(user.getPassword());
-    
-        // 将加密后的结果，设置到专门存储哈希值的 passwordHash 字段
-        user.setPasswordHash(hashedPassword); 
-
-        // 3. 将带有加密密码的用户信息存入数据库
-        userMapper.insertUser(user);
-    
-        // 4. 返回插入后的用户信息
-        return user;
-    }
-    public String loginUser(String username, String rawPassword) {
-        // 1. 根据用户名查找用户
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userMapper.findByUsername(username);
         if (user == null) {
+            throw new UsernameNotFoundException("找不到用户名为: " + username + " 的用户");
+        }
+        return user;
+    }
+
+    // --- 新增的方法：根据用户名直接返回 UserDto ---
+    public UserDto getUserDtoByUsername(String username) {
+        User user = this.getUserByUsername(username);
+        // 在 Service 层完成 User -> UserDto 的转换
+        return new UserDto(user.getId(), user.getUsername(), user.getEmail());
+    }
+    
+    public User getUserByUsername(String username) {
+        User user = userMapper.findByUsername(username);
+        if (user == null) {
+            throw new UsernameNotFoundException("找不到用户名为: " + username + " 的用户");
+        }
+        return user;
+    }
+    
+    // --- 修改的方法：接收 RegistrationRequest，返回 UserDto ---
+    public UserDto registerUser(RegistrationRequest request) {
+        if (userMapper.findByUsername(request.getUsername()) != null) {
+            throw new UsernameAlreadyExistsException("用户名 '" + request.getUsername() + "' 已存在!");
+        }
+
+        // 1. 在 Service 层将 DTO 转换为实体
+        User newUser = new User();
+        newUser.setUsername(request.getUsername());
+        newUser.setEmail(request.getEmail());
+        
+        // 2. 加密密码并设置
+        String hashedPassword = passwordEncoder.encode(request.getPassword());
+        newUser.setPasswordHash(hashedPassword); 
+        
+        // 3. 插入数据库
+        userMapper.insertUser(newUser);
+
+        // 4. 将新创建的 User 实体转换为 DTO 并返回
+        return new UserDto(newUser.getId(), newUser.getUsername(), newUser.getEmail());
+    }
+    
+    public String loginUser(String username, String rawPassword) {
+        UserDetails userDetails = this.loadUserByUsername(username);
+
+        if (!passwordEncoder.matches(rawPassword, userDetails.getPassword())) {
             throw new RuntimeException("用户名或密码错误");
         }
 
-        // 2. 验证密码
-        // passwordEncoder.matches 会自动处理加密比对
-        if (!passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
-            throw new RuntimeException("用户名或密码错误");
-        }
-
-        // 3. 密码验证成功，生成 JWT
-        return jwtUtil.generateToken(user);
+        return jwtUtil.generateToken(userDetails);
     }
 }

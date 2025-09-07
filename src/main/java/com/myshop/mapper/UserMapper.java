@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 import com.myshop.model.User; 
 
 @Mapper
-public interface UserMapper {
+public interface UserMapper {//工作指令清单
     User findByUsername(String username);
     int insertUser(User user);
 }
