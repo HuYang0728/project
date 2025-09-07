@@ -3,6 +3,8 @@ package com.myshop.model;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Data;
 
 @Data // Lombok 注解: 自动生成 Getter, Setter, toString, equals, hashCode 等方法
@@ -14,5 +16,7 @@ public class User {
     private String email;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private String password;
 
 }

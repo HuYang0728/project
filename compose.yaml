@@ -1,10 +1,16 @@
 services:
   mysql:
-    image: 'mysql:latest'
+    image: 'mysql:8.0'
+    container_name: my_shop_mysql  # 建议：给容器一个固定的名字，方便管理
     environment:
-      - 'MYSQL_DATABASE=mydatabase'
-      - 'MYSQL_PASSWORD=secret'
-      - 'MYSQL_ROOT_PASSWORD=verysecret'
-      - 'MYSQL_USER=myuser'
+      - MYSQL_ROOT_PASSWORD=114514 # 建议：使用一个更强的密码
+      - MYSQL_DATABASE=my_shop_db
     ports:
-      - '3306'
+      - '3306:3306'
+    volumes:
+      - mysql-data:/var/lib/mysql   # 关键：添加数据卷实现数据持久化
+    restart: unless-stopped         # 建议：添加重启策略
+
+# 在文件末尾定义一个顶层 volumes
+volumes:
+  mysql-data:

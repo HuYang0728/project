@@ -8,4 +8,5 @@ import com.myshop.model.User;
 @Mapper
 public interface UserMapper {
     User findByUsername(String username);
+    int insertUser(User user);
 }

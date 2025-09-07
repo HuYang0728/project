@@ -1,7 +1,8 @@
-package com.myshop.myshop;
+package com.myshop;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+
 
 @SpringBootApplication
 public class MyshopApplication {
