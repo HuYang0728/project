@@ -13,6 +13,13 @@
 - **JWT 认证**: 通过自定义的 `JwtAuthenticationFilter` 拦截并验证后续请求中的 Token，实现无状态认证。
 - **受保护的资源**: 实现 `/api/users/me` 接口，只有携带有效 Token 的用户才能访问，用以验证整个认证闭环。
 
+### ✅ 权限与用户管理模块 (RBAC & User Management Module)
+
+- **三层 RBAC 模型**: 基于业界标准的“用户-角色-权限”(User-Role-Permission)三层模型进行设计，实现了高度灵活和可扩展的权限管理体系。
+- **角色分配**: 提供 `POST /api/admin/users/{userId}/roles` 接口，供超级管理员为用户分配角色。
+- **角色移除**: 提供 `DELETE /api/admin/users/{userId}/roles/{roleId}` 接口，用于移除用户的指定角色。
+- **权限验证**: 所有后台管理接口均受 Spring Security 的方法级安全注解 `@PreAuthorize` 保护，实现了对每个操作的精细化权限控制。
+
 ### ✅ 商品管理模块 (Product Management Module)
 
 #### 后台管理接口 (Admin API)
@@ -51,6 +58,9 @@
 - **RESTful API 设计与最佳实践**
   遵循 RESTful 设计原则，使用标准的 HTTP 方法 (`POST`, `GET`, `PUT`, `DELETE`) 表达操作意图，使用 HTTP 状态码 (`201`, `204`, `404`, `409`) 表示操作结果。实现了**软删除**等业界最佳实践，并清晰地分离了后台管理 (`/api/admin`) 与前台 (`/api`) 接口。
 
+- **完整的 RBAC 权限模型 (Complete RBAC Model)**
+  通过 `users`, `roles`, `permissions` 以及两张关联表，在数据库层面构建了完整的多对多 RBAC 关系。后端通过 MyBatis 的复杂 `<resultMap>` 一次性加载用户及其所有角色和权限，并通过在 `UserDetails` 中实现 `getAuthorities()` 方法，将权限信息无缝集成到 Spring Security 的认证体系中。
+
 - **无状态认证 (Stateless Authentication)**
   采用 JWT 进行认证，服务器端无需存储用户 Session，大大提高了系统的可伸缩性 (Scalability) 和性能。这与传统的 Session 认证机制形成了鲜明对比，是现代 Web 应用的主流选择。
 
@@ -67,9 +77,6 @@
   使用 Docker 部署 MySQL 数据库，避免了在本地直接安装数据库带来的版本冲突和环境配置问题，实现了“一次构建，到处运行”的现代化开发流程。
 
 ## 未来规划与改进方向
-
-- **完善权限系统 (RBAC)**:
-  使用 Spring Security 的方法级安全注解 (`@PreAuthorize`) 来保护所有 `/api/admin/**` 接口，确保只有具备 `ADMIN` 角色的用户才能进行商品的增、删、改操作。
 
 - **功能模块扩展**:
   - **购物车**: 实现添加、删除、查看购物车商品的功能。

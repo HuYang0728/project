@@ -55,6 +55,13 @@ public class User implements UserDetails { // <-- 确保实现了 UserDetails
     @Override
     @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {
+        // --- ★★★ 临时调试代码开始 ★★★ ---
+        System.out.println("--- Checking authorities for user: " + this.username + " ---");
+        if (this.roles == null || this.roles.isEmpty()) {
+            System.out.println("!!! User has NO ROLES!");
+        }
+        // --- ★★★ 临时调试代码结束 ★★★ ---
+        
         Set<GrantedAuthority> authorities = new HashSet<>();
         // 遍历用户的所有角色
         for (Role role : this.roles) {

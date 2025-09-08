@@ -25,7 +25,16 @@
         SELECT *
         FROM products
         WHERE status != 'DELETED' </select>
-    
+
+    <select id="findProductsForUpdate" resultMap="ProductResultMap">
+        SELECT * FROM products
+        WHERE id IN
+        <foreach item="id" collection="list" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        FOR UPDATE
+    </select>
+
     <insert id="insertProduct" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO products (name, description, price, stock, image_url, status)
         VALUES (#{name}, #{description}, #{price}, #{stock}, #{imageUrl}, #{status})
@@ -48,4 +57,10 @@
         WHERE id = #{id}
     </update>
 
+    <update id="decreaseStock">
+        UPDATE products
+        SET stock = stock - #{quantity}
+        WHERE id = #{productId} AND stock >= #{quantity}
+    </update>
+    
 </mapper>

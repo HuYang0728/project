@@ -1,6 +1,9 @@
 //主厨
 package com.myshop.service;
 
+import java.util.List;
+import java.util.Set;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -12,6 +15,7 @@ import com.myshop.dto.RegistrationRequest; // 导入 DTO
 import com.myshop.dto.UserDto; // 导入 DTO
 import com.myshop.exception.UsernameAlreadyExistsException;
 import com.myshop.mapper.UserMapper;
+import com.myshop.model.Role;
 import com.myshop.model.User;
 import com.myshop.util.JwtUtil;
 
@@ -83,5 +87,37 @@ public class UserService implements UserDetailsService {
         }
 
         return jwtUtil.generateToken(userDetails);
+    }
+    /**
+     * 获取系统所有角色
+     */
+    public List<Role> getAllRoles() {
+        return userMapper.findAllRoles();
+    }
+    
+    /**
+     * 获取指定用户的所有角色
+     */
+    public Set<Role> getRolesByUserId(Long userId) {
+        return userMapper.findRolesByUserId(userId);
+    }
+    
+    /**
+     * 为用户分配角色
+     * @param userId 用户ID
+     * @param roleId 角色ID
+     */
+    public void assignRoleToUser(Long userId, Long roleId) {
+        // 在实际项目中，这里还应该检查用户和角色是否存在
+        userMapper.addRoleToUser(userId, roleId);
+    }
+
+    /**
+     * 移除用户的角色
+     * @param userId 用户ID
+     * @param roleId 角色ID
+     */
+    public void removeRoleFromUser(Long userId, Long roleId) {
+        userMapper.removeRoleFromUser(userId, roleId);
     }
 }

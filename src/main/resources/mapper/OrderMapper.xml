@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.myshop.mapper.OrderMapper">
+
+    <resultMap id="OrderWithItemsResultMap" type="com.myshop.model.Order">
+        <id property="id" column="order_id"/>
+        <result property="orderNo" column="order_no"/>
+        <result property="userId" column="user_id"/>
+        <result property="totalAmount" column="total_amount"/>
+        <result property="status" column="status" typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
+        <result property="shippingAddress" column="shipping_address"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+
+        <collection property="orderItems" ofType="com.myshop.model.OrderItem">
+            <id property="id" column="item_id"/>
+            <result property="orderId" column="order_id"/>
+            <result property="productId" column="product_id"/>
+            <result property="productName" column="product_name"/>
+            <result property="productImageUrl" column="product_image_url"/>
+            <result property="quantity" column="item_quantity"/>
+            <result property="priceAtPurchase" column="price_at_purchase"/>
+        </collection>
+    </resultMap>
+
+    <insert id="insertOrder" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO orders (order_no, user_id, total_amount, status, shipping_address)
+        VALUES (#{orderNo}, #{userId}, #{totalAmount}, #{status, typeHandler=org.apache.ibatis.type.EnumTypeHandler}, #{shippingAddress})
+    </insert>
+
+    <insert id="insertOrderItems">
+        INSERT INTO order_items (order_id, product_id, product_name, product_image_url, quantity, price_at_purchase)
+        VALUES
+        <foreach collection="items" item="item" separator=",">
+            (#{item.orderId}, #{item.productId}, #{item.productName}, #{item.productImageUrl}, #{item.quantity}, #{item.priceAtPurchase})
+        </foreach>
+    </insert>
+
+    <select id="findOrdersByUserId" resultType="com.myshop.model.Order">
+        SELECT 
+            id, order_no, user_id, total_amount, status, shipping_address, created_at, updated_at
+        FROM orders 
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+    </select>
+    
+    <select id="findOrderById" resultMap="OrderWithItemsResultMap">
+        SELECT
+            o.id AS order_id,
+            o.order_no,
+            o.user_id,
+            o.total_amount,
+            o.status,
+            o.shipping_address,
+            o.created_at,
+            o.updated_at,
+            oi.id AS item_id,
+            oi.quantity AS item_quantity,
+            oi.price_at_purchase,
+            oi.product_id,
+            oi.product_name,
+            oi.product_image_url
+        FROM orders o
+        LEFT JOIN order_items oi ON o.id = oi.order_id
+        WHERE o.id = #{orderId}
+    </select>
+    
+    <select id="findByOrderNo" resultMap="OrderWithItemsResultMap">
+        SELECT
+            o.id AS order_id,
+            o.order_no,
+            o.user_id,
+            o.total_amount,
+            o.status,
+            o.shipping_address,
+            o.created_at,
+            o.updated_at,
+            oi.id AS item_id,
+            oi.quantity AS item_quantity,
+            oi.price_at_purchase,
+            oi.product_id,
+            oi.product_name,
+            oi.product_image_url
+        FROM orders o
+        LEFT JOIN order_items oi ON o.id = oi.order_id
+        WHERE o.order_no = #{orderNo}
+    </select>
+
+</mapper>

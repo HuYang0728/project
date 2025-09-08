@@ -2,23 +2,80 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.myshop.mapper.UserMapper">
 
-    <select id="findByUsername" resultType="User" parameterType="string">
+    <resultMap id="UserWithRolesAndPermissionsResultMap" type="com.myshop.model.User">
+        <id property="id" column="user_id"/>
+        <result property="username" column="user_username"/>
+        <result property="passwordHash" column="user_password_hash"/>
+        <result property="email" column="user_email"/>
+
+        <collection property="roles" ofType="com.myshop.model.Role">
+            <id property="id" column="role_id"/>
+            <result property="name" column="role_name"/>
+
+            <collection property="permissions" ofType="com.myshop.model.Permission">
+                <id property="id" column="permission_id"/>
+                <result property="name" column="permission_name"/>
+            </collection>
+        </collection>
+    </resultMap>
+
+    <select id="findByUsername" resultMap="UserWithRolesAndPermissionsResultMap" parameterType="string">
         SELECT
-            id,
-            username,
-            password_hash,
-            email,
-            created_at,
-            updated_at
+            u.id AS user_id,
+            u.username AS user_username,
+            u.password_hash AS user_password_hash,
+            u.email AS user_email,
+            r.id AS role_id,
+            r.name AS role_name,
+            p.id AS permission_id,
+            p.name AS permission_name
         FROM
-            users
+            users u
+        LEFT JOIN
+            user_roles ur ON u.id = ur.user_id
+        LEFT JOIN
+            roles r ON ur.role_id = r.id
+        LEFT JOIN
+            role_permissions rp ON r.id = rp.role_id
+        LEFT JOIN
+            permissions p ON rp.permission_id = p.id
         WHERE
-            username = #{username}
+            u.username = #{username}
     </select>
     
-<insert id="insertUser" parameterType="User" useGeneratedKeys="true" keyProperty="id">
-    INSERT INTO users (username, password_hash, email)
-    VALUES (#{username}, #{passwordHash}, #{email})
-</insert>
+    <insert id="insertUser" parameterType="com.myshop.model.User" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (username, password_hash, email)
+        VALUES (#{username}, #{passwordHash}, #{email})
+    </insert>
 
+    <select id="findById" resultMap="UserWithRolesAndPermissionsResultMap">
+        SELECT
+            u.id AS user_id, u.username AS user_username, u.password_hash AS user_password_hash, u.email AS user_email,
+            r.id AS role_id, r.name AS role_name,
+            p.id AS permission_id, p.name AS permission_name
+        FROM users u
+        LEFT JOIN user_roles ur ON u.id = ur.user_id
+        LEFT JOIN roles r ON ur.role_id = r.id
+        LEFT JOIN role_permissions rp ON r.id = rp.role_id
+        LEFT JOIN permissions p ON rp.permission_id = p.id
+        WHERE u.id = #{id}
+    </select>
+
+    <select id="findAllRoles" resultType="com.myshop.model.Role">
+        SELECT * FROM roles
+    </select>
+    
+    <select id="findRolesByUserId" resultType="com.myshop.model.Role">
+        SELECT r.* FROM roles r
+        JOIN user_roles ur ON r.id = ur.role_id
+        WHERE ur.user_id = #{userId}
+    </select>
+
+    <insert id="addRoleToUser">
+        INSERT INTO user_roles (user_id, role_id) VALUES (#{userId}, #{roleId})
+    </insert>
+
+    <delete id="removeRoleFromUser">
+        DELETE FROM user_roles WHERE user_id = #{userId} AND role_id = #{roleId}
+    </delete>
 </mapper>
